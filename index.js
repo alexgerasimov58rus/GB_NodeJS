@@ -1,77 +1,38 @@
+const fs = require('fs');
+const { Transform } = require('stream');
 
-const colors = require("colors/safe");
+const readStream = fs.createReadStream('./data/access.log', { encoding: 'utf8' });
 
-main();
-
-function checkInputArguments(argv) {
-    if( argv.length !== 4 ){
-        console.error("Вы не передали диапазон при вызове скрипта");
-        return false;
+class MyTransform extends Transform {
+    constructor(mask){
+        super();
+        this.mask = mask;
+        this.buff = [];
     }
-
-    const a = Number.parseInt(argv[2]);
-    const b = Number.parseInt(argv[3]);
-
-    if( isNaN(a) || isNaN(b) || a < 0 || b < 0){
-        console.error("Вы передали некорректные параметры при вызове скрипта. Скрипт принимет на вход 2 положительных числа");
-        return false;
-    }
-
-    return true;
-}
-
-function getRange(argv) {
-    const range = [];
-
-    const a = Number.parseInt(argv[2]);
-    const b = Number.parseInt(argv[3]);
-
-    range[0] = Math.min(a, b);
-    range[1] = Math.max(a, b);
-
-    return range;
-}
-
-function isPrime(v) {
-    if(v < 2) return false;
-
-    const n = Math.floor(Math.sqrt(v + 0.5));
-    for (let i = 2; i <= n; i++) {
-        if( v % i === 0) {
-            return false;
-        }
-
-    }
-
-    return true;
-}
-
-function main() {
-    if (!checkInputArguments(process.argv)) return;
-    const [rangeStart, rangeEnd] = getRange(process.argv);
-
-    let countSimpleNumbers = 0;
-    for(let i = rangeStart; i <= rangeEnd; i++){
-        if( isPrime(i)){
-            switch (countSimpleNumbers % 3) {
-                case 0: console.log(colors.green(i)); break;
-                case 1: console.log(colors.yellow(i)); break;
-                case 2: console.log(colors.red(i)); break;
+    _transform(chunk, encoding, callback) {
+        let str = chunk.toString();
+        for(let s of str){
+            if( s === "\n"){
+                this.buff.push(s);
+                let line = this.buff.join('');
+                if( line.indexOf(this.mask) !== -1){
+                    this.push(line);
+                }
+                this.buff = [];
             }
-            countSimpleNumbers++;
+            else{
+                this.buff.push(s);
+            }
         }
-
-        if (countSimpleNumbers === 3) {
-            break;
-        }
-    }
-
-    if( countSimpleNumbers === 0){
-        console.log(colors.red("В заданном диапазоне нет простых чисел"));
+        callback();
     }
 }
 
+const parse_89_123_1_41 = new MyTransform('89.123.1.41');
+const parse_34_48_240_111 = new MyTransform('34.48.240.111');
 
+const log_89_123_1_41 = fs.createWriteStream('./data/89.123.1.41_requests.log', { encoding: 'utf8' });
+const log_34_48_240_111 = fs.createWriteStream('./data/34.48.240.111_requests.log', { encoding: 'utf8' });
 
-
-
+readStream.pipe(parse_89_123_1_41).pipe(log_89_123_1_41);
+readStream.pipe(parse_34_48_240_111).pipe(log_34_48_240_111);

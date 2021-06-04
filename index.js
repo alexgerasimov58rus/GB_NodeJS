@@ -1,7 +1,29 @@
 const fs = require('fs');
 const { Transform } = require('stream');
+const yargs = require("yargs");
+const path = require("path");
 
-const readStream = fs.createReadStream('./data/access.log', { encoding: 'utf8' });
+const options = yargs
+    .usage("Usage: -p <path>")
+    .option("d", {
+        alias: "dir",
+        describe: "Path to dir",
+        type: "string",
+        demandOption: true
+    })
+    .option("s", {
+        alias: "string",
+        describe: "Search string",
+        type: "string",
+        demandOption: true
+    })
+    .argv;
+
+const filePath = "";
+
+
+
+const readStream = fs.createReadStream(filePath, { encoding: 'utf8' });
 
 class MyTransform extends Transform {
     constructor(mask){

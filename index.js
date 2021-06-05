@@ -1,29 +1,28 @@
+
 const fs = require('fs');
 const { Transform } = require('stream');
 const yargs = require("yargs");
-const path = require("path");
+const objPath = require("path");
+const inquirer = require("inquirer");
 
-const options = yargs
-    .usage("Usage: -p <path>")
-    .option("d", {
-        alias: "dir",
-        describe: "Path to dir",
-        type: "string",
-        demandOption: true
-    })
-    .option("s", {
-        alias: "string",
-        describe: "Search string",
-        type: "string",
-        demandOption: true
-    })
-    .argv;
+function selectFile (path) {
+    if (fs.lstatSync(path).isFile()){
+        return path;
+    }
 
-const filePath = "";
+    const list = fs.readdirSync(path);
 
-
-
-const readStream = fs.createReadStream(filePath, { encoding: 'utf8' });
+    inquirer
+        .prompt([{
+            name: "fileName",
+            type: "list",
+            message: "Choose file:",
+            choices: list,
+        }])
+        .then((answer) => {
+            selectFile(objPath.join(path, answer.fileName));
+        });
+}
 
 class MyTransform extends Transform {
     constructor(mask){
@@ -50,11 +49,27 @@ class MyTransform extends Transform {
     }
 }
 
-const parse_89_123_1_41 = new MyTransform('89.123.1.41');
-const parse_34_48_240_111 = new MyTransform('34.48.240.111');
+const options = yargs
+    .usage("Usage: -d <directory> -s <search>")
+    .option("d", {
+        alias: "dir",
+        describe: "Path to dir",
+        type: "string",
+        demandOption: true
+    })
+    .option("s", {
+        alias: "search",
+        describe: "Search string",
+        type: "string",
+        demandOption: true
+    })
+    .argv;
 
-const log_89_123_1_41 = fs.createWriteStream('./data/89.123.1.41_requests.log', { encoding: 'utf8' });
-const log_34_48_240_111 = fs.createWriteStream('./data/34.48.240.111_requests.log', { encoding: 'utf8' });
+const filePath = selectFile(options.dir);
+const readStream = fs.createReadStream(filePath, { encoding: 'utf8' });
 
-readStream.pipe(parse_89_123_1_41).pipe(log_89_123_1_41);
-readStream.pipe(parse_34_48_240_111).pipe(log_34_48_240_111);
+const myParse = new MyTransform(options.search);
+const myLog = fs.createWriteStream('./data/' + options.search + '_requests.log', { encoding: 'utf8' });
+
+readStream.pipe(myParse).pipe(myLog);
+

@@ -21,7 +21,8 @@ function selectFile (path) {
         }])
         .then((answer) => {
             selectFile(objPath.join(path, answer.fileName));
-        });
+        })
+        .catch((error) => console.log(error));
 }
 
 class MyTransform extends Transform {

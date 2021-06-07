@@ -20,7 +20,7 @@ function selectFile (path) {
             choices: list,
         }])
         .then((answer) => {
-            selectFile(objPath.join(path, answer.fileName));
+            return selectFile(objPath.join(path, answer.fileName));
         })
         .catch((error) => console.log(error));
 }

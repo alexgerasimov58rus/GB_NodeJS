@@ -1,31 +1,11 @@
 
-const fs = require('fs');
-const { Transform } = require('stream');
 const yargs = require("yargs");
-const objPath = require("path");
+const fs = require('fs');
 const inquirer = require("inquirer");
+const path = require("path");
+const { Transform } = require('stream');
 
-function selectFile (path) {
-    if (fs.lstatSync(path).isFile()){
-        return path;
-    }
-
-    const list = fs.readdirSync(path);
-
-    inquirer
-        .prompt([{
-            name: "fileName",
-            type: "list",
-            message: "Choose file:",
-            choices: list,
-        }])
-        .then((answer) => {
-            return selectFile(objPath.join(path, answer.fileName));
-        })
-        .catch((error) => console.log(error));
-}
-
-class MyTransform extends Transform {
+class FindStringTransform extends Transform {
     constructor(mask){
         super();
         this.mask = mask;
@@ -50,11 +30,39 @@ class MyTransform extends Transform {
     }
 }
 
+function parseFile(filePath) {
+    const readStream = fs.createReadStream(filePath, { encoding: 'utf8' });
+    const myParse = new FindStringTransform(options.search);
+    const myLog = fs.createWriteStream('./data/' + options.search + '_requests.log', { encoding: 'utf8' });
+    readStream.pipe(myParse).pipe(myLog);
+}
+
+function main(selectPath) {
+    if (fs.lstatSync(selectPath).isFile()){
+        parseFile(selectPath);
+        return;
+    }
+
+    const list = fs.readdirSync(selectPath);
+
+    inquirer
+        .prompt([{
+            name: "name",
+            type: "list",
+            message: "Choose file or dir:",
+            choices: list,
+        }])
+        .then((answer) => {
+            main(path.join(selectPath, answer.name));
+        })
+        .catch((error) => console.log(error))
+}
+
 const options = yargs
-    .usage("Usage: -d <directory> -s <search>")
-    .option("d", {
-        alias: "dir",
-        describe: "Path to dir",
+    .usage("Usage: -p <path> -s <search>")
+    .option("p", {
+        alias: "path",
+        describe: "Path to file or dir",
         type: "string",
         demandOption: true
     })
@@ -66,11 +74,6 @@ const options = yargs
     })
     .argv;
 
-const filePath = selectFile(options.dir);
-const readStream = fs.createReadStream(filePath, { encoding: 'utf8' });
+main(options.path);
 
-const myParse = new MyTransform(options.search);
-const myLog = fs.createWriteStream('./data/' + options.search + '_requests.log', { encoding: 'utf8' });
-
-readStream.pipe(myParse).pipe(myLog);
 

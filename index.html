@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<script src="https://cdn.socket.io/3.1.1/socket.io.min.js"
+        integrity="sha384-gDaozqUvc4HTgo8iZjwth73C6dDDeOJsAgpxBcMpZYztUfjHXpzrpdrHRdVp8ySO"
+        crossorigin="anonymous">
+</script>
+<head>
+    <meta charset="UTF-8">
+    <title>Messenger</title>
+</head>
+<body>
+    <input type="text" id="input" autofocus>
+    <input type="submit" id="send" value="Send ">
+    <span id="login"> Login: </span>
+    <br>
+    <br>
+    <textarea cols="25" rows="15" id="messages"></textarea>
+</body>
+
+<script type="text/javascript">
+    let id = '';
+
+    const socket = io('localhost:3000');
+    const addMessage = (msg) => {
+        document.getElementById('messages').append(msg + "\n");
+    };
+
+    socket.on('connect', function() {
+        console.log('Successful connected to server');
+    });
+
+    socket.on('SERVER_ID', function (data) {
+        id = data.id;
+        console.log('Your id is ' + id);
+        document.getElementById('login').innerText = 'Login: user_' + id;
+    });
+
+    socket.on('SERVER_MSG', function (data) {
+        addMessage(data.msg);
+    });
+
+    socket.on('NEW_CONN_EVENT', function (data) {
+        addMessage(data.msg);
+    });
+
+    document.getElementById('send').onclick = function() {
+        addMessage('me: ' + document.getElementById('input').value);
+        socket.emit('CLIENT_MSG', {
+            id: id,
+            msg: document.getElementById('input').value
+        });
+        document.getElementById('input').value = '';
+    };
+</script>
+
+</html>
